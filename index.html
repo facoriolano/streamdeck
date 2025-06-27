@@ -75,14 +75,41 @@
 
     let currentPage = 0;
     const pageSize = 12;
+
+    function renderButtons() {
+      const grid = document.getElementById("button-grid");
+      grid.innerHTML = "";
+
+      const start = currentPage * pageSize;
+      const buttons = scenes.slice(start, start + pageSize);
+      buttons.forEach(name => {
+        const btn = document.createElement("button");
+        btn.textContent = name;
+        btn.onclick = () => changeScene(name);
+        grid.appendChild(btn);
+      });
+
+      if (currentPage === 0) {
+        extraButtons.forEach(({ label, action }) => {
+          const btn = document.createElement("button");
+          btn.textContent = label;
+          btn.onclick = action;
+          grid.appendChild(btn);
+        });
+      }
+    }
+
+    // 🧠 Conexão com OBS WebSocket v5
     let obs;
     let isConnected = false;
 
     function connectOBS() {
-      obs = new WebSocket("ws://192.168.0.8:4455");
+      obs = new WebSocket("ws://localhost:4455");
 
       obs.addEventListener("open", () => {
         console.log("🔌 Conectado ao OBS WebSocket");
+
+        // Enviar autenticação
         obs.send(JSON.stringify({
           op: 1,
           d: {
@@ -101,8 +128,7 @@
       });
 
       obs.addEventListener("error", (err) => {
-        console.error("❌ Erro OBS WebSocket:", err);
-        alert("OBS não está conectado.");
+        console.error("Erro OBS WebSocket:", err);
       });
 
       obs.addEventListener("close", () => {
@@ -137,29 +163,6 @@
       bc.postMessage(data);
     }
 
-    function renderButtons() {
-      const grid = document.getElementById("button-grid");
-      grid.innerHTML = "";
-
-      const start = currentPage * pageSize;
-      const buttons = scenes.slice(start, start + pageSize);
-      buttons.forEach(name => {
-        const btn = document.createElement("button");
-        btn.textContent = name;
-        btn.onclick = () => changeScene(name);
-        grid.appendChild(btn);
-      });
-
-      if (currentPage === 0) {
-        extraButtons.forEach(({ label, action }) => {
-          const btn = document.createElement("button");
-          btn.textContent = label;
-          btn.onclick = action;
-          grid.appendChild(btn);
-        });
-      }
-    }
-
     function nextPage() {
       const totalPages = Math.ceil(scenes.length / pageSize);
       if (currentPage < totalPages - 1) {
@@ -175,6 +178,7 @@
       }
     }
 
+    // Inicialização
     renderButtons();
     connectOBS();
   </script>
