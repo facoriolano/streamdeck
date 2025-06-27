@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel Stream Deck</title>
+  <style>
+    body {
+      margin: 0;
+      background: #151021;
+      font-family: 'Segoe UI', Orbitron, sans-serif;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    button {
+      background: linear-gradient(145deg, #ff6600, #cc00ff);
+      border: none;
+      color: white;
+      font-size: 14px;
+      border-radius: 16px;
+      padding: 20px 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      transition: transform 0.1s ease;
+      word-wrap: break-word;
+      text-align: center;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+    }
+
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+      width: 100%;
+      max-width: 600px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Painel Stream Deck</h2>
+  <div class="grid" id="button-grid"></div>
+  <div class="nav">
+    <button onclick="prevPage()">⬅️ Anterior</button>
+    <button onclick="nextPage()">Próxima ➡️</button>
+  </div>
+
+  <script>
+    const scenes = [
+      "Ritos Iniciais", "1a Leitura", "Salmo Responsorial", "2a Leitura", "Evangelho",
+      "Homilia", "Profissão de Fé", "Liturgia Eucaristica", "Comunhao", "Avisos",
+      "Ritos Finais", "FIM", "Batismo", "Escrever 1", "Escrever 2"
+    ];
+
+    const extraButtons = [
+      { label: "Iniciar 5min", action: () => sendBroadcast("timer-5min", { cmd: "start" }) },
+      { label: "Iniciar 45min", action: () => sendBroadcast("timer-45min", { cmd: "start" }) },
+      { label: "Mostrar Frase", action: () => sendBroadcast("frase", { show: true }) },
+      { label: "Ocultar Frase", action: () => sendBroadcast("frase", { show: false }) },
+    ];
+
+    let currentPage = 0;
+    const pageSize = 12;
+
+    function renderButtons() {
+      const grid = document.getElementById("button-grid");
+      grid.innerHTML = "";
+
+      const start = currentPage * pageSize;
+      const buttons = scenes.slice(start, start + pageSize);
+      buttons.forEach(name => {
+        const btn = document.createElement("button");
+        btn.textContent = name;
+        btn.onclick = () => changeScene(name);
+        grid.appendChild(btn);
+      });
+
+      if (currentPage === 0) {
+        extraButtons.forEach(({ label, action }) => {
+          const btn = document.createElement("button");
+          btn.textContent = label;
+          btn.onclick = action;
+          grid.appendChild(btn);
+        });
+      }
+    }
+
+    function changeScene(sceneName) {
+      console.log("Mudar para cena:", sceneName);
+      // Aqui entraria o WebSocket com o OBS
+    }
+
+    function sendBroadcast(channelName, data) {
+      const bc = new BroadcastChannel(channelName);
+      bc.postMessage(data);
+    }
+
+    function nextPage() {
+      const totalPages = Math.ceil(scenes.length / pageSize);
+      if (currentPage < totalPages - 1) {
+        currentPage++;
+        renderButtons();
+      }
+    }
+
+    function prevPage() {
+      if (currentPage > 0) {
+        currentPage--;
+        renderButtons();
+      }
+    }
+
+    renderButtons();
+  </script>
+</body>
+</html>
