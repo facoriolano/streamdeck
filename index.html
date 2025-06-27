@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Painel Stream Deck</title>
+  <script src="https://cdn.jsdelivr.net/npm/obs-websocket-js@5.0.2/dist/obs-ws.min.js"></script>
   <style>
     body {
       margin: 0;
@@ -59,8 +60,7 @@
     <button onclick="nextPage()">Próxima ➡️</button>
   </div>
 
-  <script type="module">
-    import OBSWebSocket from 'https://cdn.skypack.dev/obs-websocket-js';
+  <script>
     const scenes = [
       "Ritos Iniciais", "1a Leitura", "Salmo Responsorial", "2a Leitura", "Evangelho",
       "Homilia", "Profissão de Fé", "Liturgia Eucaristica", "Comunhao", "Avisos",
@@ -79,14 +79,33 @@
     let obs;
 
     async function connectOBS() {
-      obs = new OBSWebSocket();
+      if (obs) return;
       try {
+        const { OBSWebSocket } = window;
+        obs = new OBSWebSocket();
         await obs.connect('ws://192.168.0.8:4455', 'NHDRI3aB60pJVPEw');
-        console.log("✅ Conectado ao OBS!");
+        console.log("🟢 Conectado ao OBS WebSocket");
       } catch (err) {
-        alert("❌ OBS não está conectado.\n\nReceived from 'STREAMDECK'");
-        console.error("Erro ao conectar:", err);
+        console.error("🔴 Falha ao conectar ao OBS:", err);
+        alert("OBS não está conectado.\n\nReceived from STREAMDECK");
+        obs = null;
       }
+    }
+
+    async function changeScene(sceneName) {
+      await connectOBS();
+      if (!obs) return;
+      try {
+        await obs.call('SetCurrentProgramScene', { sceneName });
+        console.log("✅ Cena trocada para:", sceneName);
+      } catch (err) {
+        console.error("⚠️ Erro ao mudar de cena:", err);
+      }
+    }
+
+    function sendBroadcast(channelName, data) {
+      const bc = new BroadcastChannel(channelName);
+      bc.postMessage(data);
     }
 
     function renderButtons() {
@@ -112,25 +131,6 @@
       }
     }
 
-    async function changeScene(sceneName) {
-      if (!obs) {
-        alert("OBS não está conectado.");
-        return;
-      }
-      try {
-        await obs.call("SetCurrentProgramScene", { sceneName });
-        console.log("🎬 Cena trocada para:", sceneName);
-      } catch (err) {
-        alert("Erro ao trocar cena: " + err.message);
-        console.error(err);
-      }
-    }
-
-    function sendBroadcast(channelName, data) {
-      const bc = new BroadcastChannel(channelName);
-      bc.postMessage(data);
-    }
-
     function nextPage() {
       const totalPages = Math.ceil(scenes.length / pageSize);
       if (currentPage < totalPages - 1) {
@@ -147,7 +147,6 @@
     }
 
     renderButtons();
-    connectOBS();
   </script>
 </body>
 </html>
