@@ -16,7 +16,6 @@
       align-items: center;
       padding: 20px;
     }
-
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -24,7 +23,6 @@
       width: 100%;
       max-width: 600px;
     }
-
     button {
       background: linear-gradient(145deg, #ff6600, #cc00ff);
       border: none;
@@ -38,11 +36,9 @@
       word-wrap: break-word;
       text-align: center;
     }
-
     button:hover {
       transform: scale(1.05);
     }
-
     .nav {
       display: flex;
       justify-content: space-between;
@@ -79,27 +75,40 @@
     let obs;
 
     async function connectOBS() {
-      if (obs) return;
+      if (obs) return; // evita reconexão
+      obs = new OBSWebSocket();
+
+      obs.on("ConnectionOpened", () => {
+        console.log("🟢 Conexão aberta com OBS");
+      });
+
+      obs.on("ConnectionClosed", () => {
+        console.warn("🔴 Conexão fechada com OBS");
+        obs = null;
+      });
+
       try {
-        const { OBSWebSocket } = window;
-        obs = new OBSWebSocket();
-        await obs.connect('ws://192.168.0.8:4455', 'NHDRI3aB60pJVPEw');
-        console.log("🟢 Conectado ao OBS WebSocket");
+        await obs.connect("ws://192.168.0.8:4455", "NHDRI3aB60pJVPEw");
+        console.log("✅ Conectado ao OBS via WebSocket");
       } catch (err) {
-        console.error("🔴 Falha ao conectar ao OBS:", err);
-        alert("OBS não está conectado.\n\nReceived from STREAMDECK");
+        alert("❌ Falha ao conectar ao OBS: " + err.message);
+        console.error("Erro na conexão:", err);
         obs = null;
       }
     }
 
     async function changeScene(sceneName) {
       await connectOBS();
-      if (!obs) return;
+      if (!obs) {
+        alert("OBS não está conectado.");
+        return;
+      }
       try {
-        await obs.call('SetCurrentProgramScene', { sceneName });
-        console.log("✅ Cena trocada para:", sceneName);
+        await obs.call("SetCurrentProgramScene", { sceneName });
+        console.log("🎬 Cena trocada para:", sceneName);
       } catch (err) {
-        console.error("⚠️ Erro ao mudar de cena:", err);
+        alert("Erro ao trocar cena: " + err.message);
+        console.error(err);
       }
     }
 
@@ -146,7 +155,9 @@
       }
     }
 
+    // Inicialização
     renderButtons();
+    connectOBS();
   </script>
 </body>
 </html>
