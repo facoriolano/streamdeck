@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Painel Stream Deck</title>
+  <script src="https://cdn.jsdelivr.net/npm/obs-websocket-js@5.0.2/dist/obs-ws.min.js"></script>
   <style>
     body {
       margin: 0;
@@ -75,6 +76,37 @@
 
     let currentPage = 0;
     const pageSize = 12;
+    let obs;
+
+    async function connectOBS() {
+      if (obs) return;
+      try {
+        const { OBSWebSocket } = window;
+        obs = new OBSWebSocket();
+        await obs.connect('ws://localhost:4455', 'NHDRI3aB60pJVPEw');
+        console.log("🟢 Conectado ao OBS WebSocket");
+      } catch (err) {
+        console.error("🔴 Falha ao conectar ao OBS:", err);
+        alert("OBS não está conectado.\n\nReceived from STREAMDECK");
+        obs = null;
+      }
+    }
+
+    async function changeScene(sceneName) {
+      await connectOBS();
+      if (!obs) return;
+      try {
+        await obs.call('SetCurrentProgramScene', { sceneName });
+        console.log("✅ Cena trocada para:", sceneName);
+      } catch (err) {
+        console.error("⚠️ Erro ao mudar de cena:", err);
+      }
+    }
+
+    function sendBroadcast(channelName, data) {
+      const bc = new BroadcastChannel(channelName);
+      bc.postMessage(data);
+    }
 
     function renderButtons() {
       const grid = document.getElementById("button-grid");
@@ -99,70 +131,6 @@
       }
     }
 
-    // 🧠 Conexão com OBS WebSocket v5
-    let obs;
-    let isConnected = false;
-
-    function connectOBS() {
-      obs = new WebSocket("ws://localhost:4455");
-
-      obs.addEventListener("open", () => {
-        console.log("🔌 Conectado ao OBS WebSocket");
-
-        // Enviar autenticação
-        obs.send(JSON.stringify({
-          op: 1,
-          d: {
-            rpcVersion: 1,
-            authentication: "NHDRI3aB60pJVPEw"
-          }
-        }));
-      });
-
-      obs.addEventListener("message", (event) => {
-        const msg = JSON.parse(event.data);
-        if (msg.op === 2) {
-          console.log("✅ Autenticado no OBS");
-          isConnected = true;
-        }
-      });
-
-      obs.addEventListener("error", (err) => {
-        console.error("Erro OBS WebSocket:", err);
-      });
-
-      obs.addEventListener("close", () => {
-        console.warn("🔌 OBS desconectado");
-        isConnected = false;
-      });
-    }
-
-    function changeScene(sceneName) {
-      if (!isConnected) {
-        alert("OBS não está conectado.");
-        return;
-      }
-
-      const msg = {
-        op: 6,
-        d: {
-          requestType: "SetCurrentProgramScene",
-          requestId: "trocarCena" + Date.now(),
-          requestData: {
-            sceneName: sceneName
-          }
-        }
-      };
-
-      obs.send(JSON.stringify(msg));
-      console.log("🎬 Cena solicitada:", sceneName);
-    }
-
-    function sendBroadcast(channelName, data) {
-      const bc = new BroadcastChannel(channelName);
-      bc.postMessage(data);
-    }
-
     function nextPage() {
       const totalPages = Math.ceil(scenes.length / pageSize);
       if (currentPage < totalPages - 1) {
@@ -178,9 +146,7 @@
       }
     }
 
-    // Inicialização
     renderButtons();
-    connectOBS();
   </script>
 </body>
 </html>
